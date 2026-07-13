@@ -26,6 +26,11 @@ SECRET_KEY = 'django-insecure-s_*5trc5w65lhq1ft4x$2adf&uq)6ot7xf4r*r95flehashphg
 DEBUG = True
 
 ALLOWED_HOSTS = []
+# Authentication settings
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = 'dashboard'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 
 # Application definition
@@ -37,7 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tracker'
+    'django_filters',
+    'tracker',
 ]
 
 MIDDLEWARE = [

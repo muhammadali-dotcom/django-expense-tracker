@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Delete Category</h5>
+      </div>
+      <div class="card-body">
+        <p>
+          Are you sure you want to delete the category
+          <strong>{{ object.name }}</strong>?
+        </p>
+        <p class="text-muted small">
+          Any transactions assigned to this category will have their category
+          set to <em>None</em>. The transactions themselves will not be deleted.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Yes, delete</button>
+            <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

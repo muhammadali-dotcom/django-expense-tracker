@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <h2 class="mb-4">Profile Settings</h2>
+  <div class="row">
+    <!-- Password Change Form -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Change Password</div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="password" />
+            {{ password_form.non_field_errors }}
+            {% for field in password_form.visible_fields %}
+              <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field|add_class:"form-control" }}
+                {{ field.errors }}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-success w-100">Update Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Currency Preference Form -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">Currency Preference</div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="currency" />
+            {{ currency_form.non_field_errors }}
+            {% for field in currency_form.visible_fields %}
+              <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field|add_class:"form-select" }}
+                {{ field.errors }}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary w-100">Save Currency</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

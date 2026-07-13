@@ -1,0 +1,9 @@
+{% load static %}
+<nav class="nav flex-column p-3" style="height:100%;">
+  <a class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+  <a class="nav-link text-white {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}" href="{% url 'transaction_list' %}">Transactions</a>
+  <a class="nav-link text-white {% if request.resolver_match.url_name == 'add_transaction' %}active{% endif %}" href="{% url 'add_transaction' %}">Add Transaction</a>
+  <a class="nav-link text-white {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}" href="{% url 'category_list' %}">Categories</a>
+  <a class="nav-link text-white {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}">Profile</a>
+  <a class="nav-link text-white" href="{% url 'logout' %}">Logout</a>
+</nav>

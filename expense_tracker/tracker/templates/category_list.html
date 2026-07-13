@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Categories</h2>
+  <a href="{% url 'category_create' %}"
+     class="btn btn-primary"
+     style="min-height: 44px;">
+    + Create Category
+  </a>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% if categories %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Budget</th>
+          <th>Spent (this month)</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+          <tr>
+            {# Name #}
+            <td>{{ category.name }}</td>
+
+            {# Budget #}
+            <td>
+              {% if category.budget %}
+                {{ category.budget }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            {# Spent and Status — resolved from budget_status context #}
+            {% if category.budget %}
+              {# Category has a budget: find its entry in budget_status #}
+              {% with bs_entry=None %}
+                {% for bs in budget_status %}
+                  {% if bs.category.pk == category.pk %}
+                    {# Spent column #}
+                    <td data-label="Spent">{{ bs.spent|floatformat:2 }}</td>
+
+                    {# Status badge column #}
+                    <td data-label="Status">
+                      {% if bs.pct >= 100 %}
+                        <span class="badge bg-danger">Over budget ({{ bs.pct|floatformat:0 }}%)</span>
+                      {% elif bs.pct >= 80 %}
+                        <span class="badge bg-warning text-dark">Near limit ({{ bs.pct|floatformat:0 }}%)</span>
+                      {% else %}
+                        <span class="badge bg-success">OK ({{ bs.pct|floatformat:0 }}%)</span>
+                      {% endif %}
+                    </td>
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            {% else %}
+              {# No budget set — show dashes, no badge #}
+              <td><span class="text-muted">—</span></td>
+              <td></td>
+            {% endif %}
+
+            {# Actions #}
+            <td class="text-end">
+              <a href="{% url 'category_edit' category.pk %}"
+                 class="btn btn-outline-secondary btn-sm"
+                 style="min-height: 44px;">
+                Rename
+              </a>
+              <button type="button"
+                      class="btn btn-outline-danger btn-sm ms-1"
+                      style="min-height: 44px;"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal-{{ category.pk }}">
+                Delete
+              </button>
+            </td>
+          </tr>
+
+          {# ── Inline delete-confirmation modal (one per row) ── #}
+          <div class="modal fade"
+               id="deleteModal-{{ category.pk }}"
+               tabindex="-1"
+               aria-labelledby="deleteModalLabel-{{ category.pk }}"
+               aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteModalLabel-{{ category.pk }}">
+                    Delete "{{ category.name }}"?
+                  </h5>
+                  <button type="button"
+                          class="btn-close"
+                          data-bs-dismiss="modal"
+                          aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <p>
+                    Are you sure you want to delete
+                    <strong>{{ category.name }}</strong>?
+                    Existing transactions linked to this category will have
+                    their category cleared.
+                  </p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button"
+                          class="btn btn-secondary"
+                          style="min-height: 44px;"
+                          data-bs-dismiss="modal">
+                    Cancel
+                  </button>
+                  <form method="post"
+                        action="{% url 'category_delete' category.pk %}"
+                        class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="btn btn-danger"
+                            style="min-height: 44px;">
+                      Yes, delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {# ── end modal ── #}
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% else %}
+  {# Empty state #}
+  <div class="text-center text-muted py-5">
+    <p class="mb-2">No categories yet.</p>
+    <a href="{% url 'category_create' %}"
+       class="btn btn-primary"
+       style="min-height: 44px;">
+      Create your first category
+    </a>
+  </div>
+{% endif %}
+{% endblock %}

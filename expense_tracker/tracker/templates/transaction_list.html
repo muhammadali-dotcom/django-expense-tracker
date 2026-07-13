@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Transactions</h2>
+  <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm me-2">+ Add Transaction</a>
+  <a href="{% url 'export_csv' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary btn-sm">Export CSV</a>
+</div>
+
+<!-- Filter form -->
+<div class="card mb-4">
+  <div class="card-header fw-semibold">Filter</div>
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">{{ filter.form.date__gte.label }}</label>
+        {{ filter.form.date__gte }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">{{ filter.form.date__lte.label }}</label>
+        {{ filter.form.date__lte }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">{{ filter.form.category.label }}</label>
+        {{ filter.form.category }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">{{ filter.form.transaction_type.label }}</label>
+        {{ filter.form.transaction_type }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">{{ filter.form.description.label }}</label>
+        {{ filter.form.description }}
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+        <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Transaction table -->
+<div class="card">
+  <div class="card-body p-0">
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th class="text-end">Amount</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for transaction in transactions %}
+          <tr>
+            <td>{{ transaction.date }}</td>
+            <td>
+              {% if transaction.transaction_type == 'Income' %}
+                <span class="badge bg-success">Income</span>
+              {% else %}
+                <span class="badge bg-danger">Expense</span>
+              {% endif %}
+            </td>
+            <td>{{ transaction.category|default:"—" }}</td>
+            <td>{{ transaction.description|default:"—" }}</td>
+            <td class="text-end">{{ currency_symbol }}{{ transaction.amount|floatformat:2 }}</td>
+            <td>
+                <a href="{% url 'edit_transaction' transaction.pk %}" class="btn btn-sm btn-outline-primary me-1">Edit</a>
+                <a href="{% url 'delete_transaction' transaction.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center py-3">
+      <nav aria-label="Transaction pagination">
+        <ul class="pagination mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <p class="mb-0">No transactions found matching your filters.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
