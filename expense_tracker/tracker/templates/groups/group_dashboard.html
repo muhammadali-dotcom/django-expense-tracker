@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Group Expense Dashboard – Expenzo{% endblock %}
+{% block topbar_title %}Group Expense Dashboard{% endblock %}
+{% block topbar_desc %}Overview of your groups, shared expenses, balances, and smart settlements.{% endblock %}
+
+{% block content %}
+<!-- KPI cards -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4">
+  <div class="col">
+    <div class="stat-card">
+      <div class="stat-icon expense"><i class="bi bi-receipt"></i></div>
+      <div>
+        <div class="stat-label">Total Group Expenses</div>
+        <div class="stat-value expense">{{ stats.total_expenses|floatformat:2 }}</div>
+        <div class="stat-sub">Across all groups</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card">
+      <div class="stat-icon income"><i class="bi bi-arrow-down-circle"></i></div>
+      <div>
+        <div class="stat-label">You'll Receive</div>
+        <div class="stat-value income">{{ stats.receive_total|floatformat:2 }}</div>
+        <div class="stat-sub">Owed to you across groups</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card">
+      <div class="stat-icon balance"><i class="bi bi-arrow-up-circle"></i></div>
+      <div>
+        <div class="stat-label">You Need to Pay</div>
+        <div class="stat-value" style="color: var(--danger);">{{ stats.pay_total|floatformat:2 }}</div>
+        <div class="stat-sub">Owed by you across groups</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-label">Active Groups</div>
+        <div class="stat-value">{{ stats.total_groups }}</div>
+        <div class="stat-sub">{{ stats.total_people }} total people</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card">
+      <div class="stat-icon teal"><i class="bi bi-calendar3"></i></div>
+      <div>
+        <div class="stat-label">Current Period</div>
+        <div class="stat-value" style="font-size: 16px;">{% now "F Y" %}</div>
+        <div class="stat-sub">This month</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-funnel" style="color: var(--primary);"></i> Filter Period
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label" for="dash-start-date">From Date</label>
+        <input type="date" id="dash-start-date" name="start_date" class="form-control" value="{{ start_date }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="dash-end-date">To Date</label>
+        <input type="date" id="dash-end-date" name="end_date" class="form-control" value="{{ end_date }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="dash-group">Group</label>
+        <select id="dash-group" name="group" class="form-select">
+          <option value="">All Groups</option>
+          {% for group in groups %}
+          <option value="{{ group.pk }}" {% if selected_group_id|stringformat:"s" == group.pk|stringformat:"s" %}selected{% endif %}>{{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="bi bi-filter"></i> Apply Filters
+        </button>
+        <a href="{% url 'group_dashboard' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Analytics -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-bar-chart-fill" style="color: var(--primary);"></i> Monthly Trend
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        {% if monthly_expenses %}
+        <canvas id="monthlyChart"></canvas>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-bar-chart"></i><h6>No expenses yet</h6></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-pie-chart-fill" style="color: var(--teal);"></i> Expenses by Category
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        {% if category_totals %}
+        <canvas id="categoryChart" style="max-height:260px;"></canvas>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-pie-chart"></i><h6>No expenses yet</h6></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Smart Settlement Suggestions -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-stars" style="color: var(--accent-gold);"></i> Smart Settlement Suggestions
+      </div>
+      <div class="card-body p-0">
+        {% if pending_settlements %}
+        <div class="table-scroll">
+          {% for entry in pending_settlements %}
+          <div class="d-flex align-items-center justify-content-between" style="padding: 14px 22px; border-bottom: 1px solid var(--border);">
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar sm">{{ entry.from.name|slice:":1"|upper }}</span>
+              <span class="avatar sm gold">{{ entry.to.name|slice:":1"|upper }}</span>
+              <span style="font-size: 13.5px; margin-left: 6px;">
+                <strong>{{ entry.from.name }}</strong> pays <strong>{{ entry.to.name }}</strong>
+                <span style="color: var(--text-secondary); font-size: 12px;">· {{ entry.group.name }}</span>
+              </span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span class="balance-positive">{{ entry.amount|floatformat:2 }}</span>
+              <form method="post" action="{% url 'settlement_mark_paid' entry.group.pk %}" onsubmit="return confirm('Mark {{ entry.from.name }} → {{ entry.to.name }} ({{ entry.amount|floatformat:2 }}) as paid?');">
+                {% csrf_token %}
+                <input type="hidden" name="from_person" value="{{ entry.from.pk }}">
+                <input type="hidden" name="to_person" value="{{ entry.to.pk }}">
+                <input type="hidden" name="amount" value="{{ entry.amount }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm">Mark as Paid</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="bi bi-check-circle"></i>
+          <h6>No pending settlements</h6>
+          <p>Everyone is settled up.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Groups -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-people-fill" style="color: var(--primary);"></i> Groups
+      </div>
+      <div class="card-body">
+        {% for group in groups %}
+        <a href="{% url 'group_detail' group.pk %}" class="d-flex justify-content-between align-items-center mb-2" style="padding: 9px 0; border-bottom: 1px solid var(--border); color: inherit;">
+          <span style="font-size: 13.5px; font-weight: 600;">{{ group.name }}</span>
+          <span class="badge-neutral">{{ group.members.count }} member{{ group.members.count|pluralize }}</span>
+        </a>
+        {% empty %}
+        <p style="color: var(--text-secondary); font-size: 13px;">No groups yet.</p>
+        {% endfor %}
+        <a href="{% url 'group_list' %}" class="btn btn-outline-primary btn-sm mt-2">View All Groups</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Group Expenses -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-clock-history" style="color: var(--teal);"></i> Recent Group Expenses</span>
+    <a href="{% url 'group_reports' %}" class="btn btn-outline-secondary btn-sm">View All</a>
+  </div>
+  <div class="card-body p-0">
+    {% if recent_expenses %}
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr><th scope="col">Expense</th><th scope="col">Group</th><th scope="col">Paid By</th><th scope="col">Category</th><th scope="col">Date</th><th scope="col" class="text-end">Amount</th></tr>
+        </thead>
+        <tbody>
+          {% for expense in recent_expenses %}
+          <tr>
+            <td style="font-weight: 600;">{{ expense.title }}</td>
+            <td>{{ expense.group.name }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar sm sage">{{ expense.paid_by.name|slice:":1"|upper }}</span>
+                {{ expense.paid_by.name }}
+              </div>
+            </td>
+            <td><span class="badge-category">{{ expense.category }}</span></td>
+            <td>{{ expense.expense_date }}</td>
+            <td class="text-end" style="font-weight: 700;">{{ expense.total_amount }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-receipt"></i>
+      <h6>No expenses yet</h6>
+      <p>Add an expense inside a group to see it here.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if monthly_expenses or category_totals %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ monthly_expenses|json_script:"monthly-data" }}
+{{ category_totals|json_script:"category-data" }}
+<script>
+  var PALETTE = ['#075B45', '#C6973D', '#208C83', '#5F8F7A', '#D84A45', '#8FA98E'];
+
+  var monthly = JSON.parse(document.getElementById('monthly-data').textContent);
+  if (monthly.length) {
+    new Chart(document.getElementById('monthlyChart'), {
+      type: 'line',
+      data: {
+        labels: monthly.map(function (d) { return d.month; }),
+        datasets: [{
+          label: 'Total Expenses',
+          data: monthly.map(function (d) { return d.total; }),
+          borderColor: '#075B45',
+          backgroundColor: 'rgba(7,91,69,.08)',
+          fill: true,
+          tension: .35,
+          pointBackgroundColor: '#075B45',
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#68756F', font: { family: 'Plus Jakarta Sans', size: 12 } } } },
+        scales: {
+          x: { ticks: { color: '#68756F', font: { size: 11 } }, grid: { color: '#E7E3DA' } },
+          y: { ticks: { color: '#68756F', font: { size: 11 } }, grid: { color: '#E7E3DA' } }
+        }
+      }
+    });
+  }
+
+  var categories = JSON.parse(document.getElementById('category-data').textContent);
+  if (categories.length) {
+    new Chart(document.getElementById('categoryChart'), {
+      type: 'doughnut',
+      data: {
+        labels: categories.map(function (c) { return c.category; }),
+        datasets: [{ data: categories.map(function (c) { return c.total; }), backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 8 }]
+      },
+      options: {
+        responsive: true,
+        cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#68756F', font: { family: 'Plus Jakarta Sans', size: 12 }, padding: 16, boxWidth: 12 } } }
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}

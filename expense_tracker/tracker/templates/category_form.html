@@ -1,56 +1,55 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Category – Expenzo{% endblock %}
+{% block topbar_title %}{% if object %}Edit Category{% else %}New Category{% endif %}{% endblock %}
+{% block topbar_desc %}Create or update a spending category.{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h5 class="mb-0">
-          {% if object %}Edit Category{% else %}Add Category{% endif %}
-        </h5>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        {% if object %}
+          <i class="bi bi-pencil-fill" style="color: var(--clr-primary);"></i> Edit Category
+        {% else %}
+          <i class="bi bi-tag-fill" style="color: var(--clr-primary);"></i> New Category
+        {% endif %}
       </div>
       <div class="card-body">
-        <form method="post" novalidate>
+        <form method="POST" novalidate>
           {% csrf_token %}
-
-          <div class="mb-3">
-            <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
-            <input
-              type="text"
-              name="{{ form.name.html_name }}"
-              id="{{ form.name.id_for_label }}"
-              value="{{ form.name.value|default:'' }}"
-              class="form-control{% if form.name.errors %} is-invalid{% endif %}"
-              required
-            >
+          <div class="mb-4">
+            <label for="{{ form.name.id_for_label }}" class="form-label">Category Name *</label>
+            {% if form.name.errors %}
+              {{ form.name|add_class:"form-control is-invalid" }}
+            {% else %}
+              {{ form.name|add_class:"form-control" }}
+            {% endif %}
             {% for error in form.name.errors %}
-              <div class="invalid-feedback">{{ error }}</div>
+              <div style="color: var(--clr-expense); font-size: 12px; margin-top: 4px;">{{ error }}</div>
             {% endfor %}
           </div>
-
-          <div class="mb-3">
-            <label for="{{ form.budget.id_for_label }}" class="form-label">
-              Budget <span class="text-muted">(optional)</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              name="{{ form.budget.html_name }}"
-              id="{{ form.budget.id_for_label }}"
-              value="{{ form.budget.value|default:'' }}"
-              class="form-control{% if form.budget.errors %} is-invalid{% endif %}"
-            >
+          <div class="mb-4">
+            <label for="{{ form.budget.id_for_label }}" class="form-label">Monthly Budget (optional)</label>
+            {% if form.budget.errors %}
+              {{ form.budget|add_class:"form-control is-invalid" }}
+            {% else %}
+              {{ form.budget|add_class:"form-control" }}
+            {% endif %}
             {% for error in form.budget.errors %}
-              <div class="invalid-feedback">{{ error }}</div>
+              <div style="color: var(--clr-expense); font-size: 12px; margin-top: 4px;">{{ error }}</div>
             {% endfor %}
+            <div style="font-size: 12px; color: var(--clr-muted); margin-top: 6px;">
+              Set a budget to track how much you spend in this category each month.
+            </div>
           </div>
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-              {% if object %}Save Changes{% else %}Create{% endif %}
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'category_list' %}" class="btn btn-secondary btn-sm">
+              <i class="bi bi-x-lg"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg"></i> {% if object %}Update{% else %}Create{% endif %} Category
             </button>
-            <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
       </div>

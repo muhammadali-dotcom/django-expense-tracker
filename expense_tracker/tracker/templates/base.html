@@ -1,95 +1,142 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>{% block title %}Expense Tracker{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Expenzo – Smart Settlements{% endblock %}</title>
+  <meta name="description" content="Track your income and expenses, and settle group expenses intelligently with Expenzo.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap (grid + utilities only; all component styling comes from theme.css) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: linear-gradient(120deg, #f8f9fa, #eef1f5);
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .card { animation: fadeIn 0.4s ease-in; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .btn-min { min-height: 44px; min-width: 44px; }
-    body { overflow-x: hidden; }
-  </style>
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Expenzo design system -->
+  <link rel="stylesheet" href="{% static 'tracker/css/theme.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-light">
-  <!-- Top Bar -->
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="{% url 'dashboard' %}">ExpenseTracker</a>
-      <div class="d-flex align-items-center">
-        <button id="themeToggle" class="btn btn-outline-light btn-sm me-2 btn-min">🌓</button>
-        <button class="btn btn-outline-light btn-sm d-lg-none btn-min" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
-          ☰
+<body>
+
+{% if user.is_authenticated %}
+<!-- Authenticated layout: sidebar + topbar + content -->
+<div class="app-wrapper">
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="brand-name">Expenzo</div>
+        <div class="brand-sub">Smart Settlements</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <div class="sidebar-label">Main</div>
+      <a href="{% url 'dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-house-door"></i> Dashboard
+      </a>
+      <a href="{% url 'transaction_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}">
+        <i class="bi bi-list-ul"></i> Transactions
+      </a>
+      <a href="{% url 'add_transaction' %}" class="sidebar-link {% if request.resolver_match.url_name == 'add_transaction' %}active{% endif %}">
+        <i class="bi bi-plus-circle"></i> Add Expense
+      </a>
+      <a href="{% url 'category_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+        <i class="bi bi-tag"></i> Categories
+      </a>
+      <a href="{% url 'profile' %}" class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+        <i class="bi bi-person-circle"></i> Profile
+      </a>
+
+      <div class="sidebar-label">Groups</div>
+      <a href="{% url 'group_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'group_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Groups Dashboard
+      </a>
+      <a href="{% url 'group_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'group_list' or request.resolver_match.url_name == 'group_detail' %}active{% endif %}">
+        <i class="bi bi-people"></i> Groups
+      </a>
+      <a href="{% url 'person_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'person_list' %}active{% endif %}">
+        <i class="bi bi-person-lines-fill"></i> People
+      </a>
+      <a href="{% url 'group_reports' %}" class="sidebar-link {% if request.resolver_match.url_name == 'group_reports' %}active{% endif %}">
+        <i class="bi bi-graph-up"></i> Group Reports
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="sidebar-link logout" style="background:none;border:none;width:100%;text-align:left;cursor:pointer;">
+          <i class="bi bi-box-arrow-left"></i> Logout
         </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn-icon d-lg-none" id="sidebarToggle" aria-label="Toggle navigation menu"><i class="bi bi-list"></i></button>
+      <div>
+        <div class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-desc">{% block topbar_desc %}{% endblock %}</div>
       </div>
     </div>
-  </nav>
-
-  <!-- Sidebar for desktop -->
-  <div class="d-none d-lg-block" id="sidebarDesktop" style="position:fixed; top:56px; bottom:0; width:200px; background:#343a40; color:#fff;">
-    {% include "_sidebar.html" %}
-  </div>
-
-  <!-- Offcanvas Sidebar for mobile -->
-  <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
-    <div class="offcanvas-header">
-      <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">Menu</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body p-0">
-      {% include "_sidebar.html" %}
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <div class="container-fluid" style="margin-left:0; padding-top:1rem;">
-    <div class="row">
-      <div class="col-lg-2 d-none d-lg-block"></div>
-      <div class="col-lg-10 offset-lg-2" style="margin-left:200px;">
-        {% block content %}{% endblock %}
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast container -->
-  <div aria-live="polite" aria-atomic="true" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-    {% for message in messages %}
-      <div class="toast align-items-center text-white bg-{{ message.tags }} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
-        <div class="d-flex">
-          <div class="toast-body">{{ message }}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    <div class="topbar-right">
+      <button type="button" class="btn-icon" aria-label="Notifications">
+        <i class="bi bi-bell"></i>
+        <span class="notif-dot" aria-hidden="true"></span>
+      </button>
+      <div class="topbar-user">
+        <div class="avatar">{{ request.user.username|first|upper }}</div>
+        <div>
+          {{ request.user.username }}
+          <span class="plan-label">Account</span>
         </div>
       </div>
-    {% endfor %}
-  </div>
+    </div>
+  </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlEl = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlEl.setAttribute('data-bs-theme', savedTheme);
-    themeToggle.innerText = savedTheme === 'dark' ? '☀️' : '🌓';
-    themeToggle.addEventListener('click', () => {
-      const current = htmlEl.getAttribute('data-bs-theme');
-      const newTheme = current === 'dark' ? 'light' : 'dark';
-      htmlEl.setAttribute('data-bs-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-      themeToggle.innerText = newTheme === 'dark' ? '☀️' : '🌓';
-    });
-    document.addEventListener('DOMContentLoaded', function () {
-      const toastElList = [].slice.call(document.querySelectorAll('.toast'));
-      const toastList = toastElList.map(function (toastEl) { return new bootstrap.Toast(toastEl); });
-      toastList.forEach(toast => toast.show());
-    });
-  </script>
+  <!-- Page body -->
+  <main class="main-content">
+    <div class="page-body fade-in">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+
+{% endif %}
+
+<!-- Toast messages -->
+{% if messages %}
+<div class="toast-container-custom">
+  {% for message in messages %}
+  <div class="toast-custom {% if message.tags == 'success' %}success{% elif message.tags == 'error' %}error{% else %}info{% endif %}" id="toast-{{ forloop.counter }}" role="status">
+    {% if message.tags == 'success' %}
+      <i class="bi bi-check-circle-fill" style="color: var(--success); font-size: 18px;"></i>
+    {% elif message.tags == 'error' %}
+      <i class="bi bi-x-circle-fill" style="color: var(--danger); font-size: 18px;"></i>
+    {% else %}
+      <i class="bi bi-info-circle-fill" style="color: var(--teal); font-size: 18px;"></i>
+    {% endif %}
+    <span style="font-size: 13.5px;">{{ message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Bootstrap JS (modals, dropdowns) + Expenzo shared JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'tracker/js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

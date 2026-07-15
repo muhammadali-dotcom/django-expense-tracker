@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}{{ group.name }} – Expenzo{% endblock %}
+{% block topbar_title %}{{ group.name }}{% endblock %}
+{% block topbar_desc %}Members, balances, expenses, and settlements for this group.{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h5 class="page-heading mb-0">{{ group.name }}</h5>
+    <p style="color: var(--text-secondary); font-size: 13px; margin: 4px 0 0;">{{ group.description }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'group_expense_create' group.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Add Expense
+    </a>
+    <a href="{% url 'group_edit' group.pk %}" class="btn btn-secondary btn-sm">
+      <i class="bi bi-pencil"></i> Edit
+    </a>
+    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteGroupModal">
+      <i class="bi bi-trash"></i>
+    </button>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon expense"><i class="bi bi-cash-stack"></i></div>
+      <div>
+        <div class="stat-label">Total Group Spending</div>
+        <div class="stat-value expense">{{ total_spent|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-label">Members</div>
+        <div class="stat-value">{{ group_members|length }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Members -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-people-fill" style="color: var(--primary);"></i> Members
+      </div>
+      <div class="card-body">
+        {% for gm in group_members %}
+        <div class="d-flex justify-content-between align-items-center mb-2" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+          <span class="d-flex align-items-center gap-2" style="font-size: 13.5px;">
+            <span class="avatar sm">{{ gm.person.name|slice:":1"|upper }}</span>
+            {{ gm.person.name }}
+          </span>
+          <form method="post" action="{% url 'group_member_remove' group.pk gm.pk %}" onsubmit="return confirm('Remove {{ gm.person.name }} from this group?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm" style="padding: 2px 8px;" aria-label="Remove {{ gm.person.name }}">
+              <i class="bi bi-x"></i>
+            </button>
+          </form>
+        </div>
+        {% empty %}
+        <p style="color: var(--text-secondary); font-size: 13px;">No members yet.</p>
+        {% endfor %}
+
+        <form method="post" action="{% url 'group_member_add' group.pk %}" class="mt-3 d-flex gap-2">
+          {% csrf_token %}
+          {{ member_add_form.person|add_class:"form-select form-select-sm" }}
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+        </form>
+        {% if member_add_form.person.field.queryset.count == 0 %}
+        <p style="font-size: 12px; color: var(--clr-muted); margin-top: 6px;">
+          All your people are already in this group, or you haven't <a href="{% url 'person_create' %}">added any people</a> yet.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Balances -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-wallet2" style="color: var(--teal);"></i> Balances
+      </div>
+      <div class="card-body p-0">
+        {% if balances %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr><th scope="col">Person</th><th scope="col">Balance</th><th scope="col">Status</th></tr>
+            </thead>
+            <tbody>
+              {% for person, balance in balances %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2" style="font-weight: 600;">
+                    <span class="avatar sm {% if balance > 0 %}teal{% elif balance < 0 %}{% else %}sage{% endif %}">{{ person.name|slice:":1"|upper }}</span>
+                    {{ person.name }}
+                  </div>
+                </td>
+                <td class="{% if balance > 0 %}balance-positive{% elif balance < 0 %}balance-negative{% else %}balance-neutral{% endif %}">
+                  {{ balance|floatformat:2 }}
+                </td>
+                <td>
+                  {% if balance > 0 %}
+                    <span class="badge-ok">Gets back</span>
+                  {% elif balance < 0 %}
+                    <span class="badge-over">Owes</span>
+                  {% else %}
+                    <span class="badge-neutral">Settled</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="bi bi-wallet2"></i>
+          <h6>No expenses yet</h6>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settlement plan -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-stars" style="color: var(--accent-gold);"></i> Suggested Settlements
+  </div>
+  <div class="card-body p-0">
+    {% if settlement_plan %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Amount</th><th scope="col" class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in settlement_plan %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar sm">{{ entry.from.name|slice:":1"|upper }}</span>
+                {{ entry.from.name }}
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar sm gold">{{ entry.to.name|slice:":1"|upper }}</span>
+                {{ entry.to.name }}
+              </div>
+            </td>
+            <td class="balance-positive">{{ entry.amount|floatformat:2 }}</td>
+            <td class="text-end">
+              <form method="post" action="{% url 'settlement_mark_paid' group.pk %}" onsubmit="return confirm('Mark {{ entry.from.name }} → {{ entry.to.name }} ({{ entry.amount|floatformat:2 }}) as paid?');">
+                {% csrf_token %}
+                <input type="hidden" name="from_person" value="{{ entry.from.pk }}">
+                <input type="hidden" name="to_person" value="{{ entry.to.pk }}">
+                <input type="hidden" name="amount" value="{{ entry.amount }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-check-lg"></i> Mark as Paid
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-check-circle"></i>
+      <h6>Everyone is settled up</h6>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Expense history -->
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-receipt" style="color: var(--teal);"></i> Expense History
+  </div>
+  <div class="card-body p-0">
+    {% if expenses %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr><th scope="col">Title</th><th scope="col">Amount</th><th scope="col">Paid By</th><th scope="col">Category</th><th scope="col">Date</th><th scope="col" class="text-end">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for expense in expenses %}
+          <tr>
+            <td>
+              <div style="font-weight: 600;">{{ expense.title }}</div>
+              {% if expense.description %}<div style="font-size:12px;color:var(--text-secondary);">{{ expense.description }}</div>{% endif %}
+            </td>
+            <td style="font-weight: 700;">{{ expense.total_amount }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar sm sage">{{ expense.paid_by.name|slice:":1"|upper }}</span>
+                {{ expense.paid_by.name }}
+              </div>
+            </td>
+            <td><span class="badge-category">{{ expense.category }}</span></td>
+            <td>{{ expense.expense_date }}</td>
+            <td class="text-end">
+              <a href="{% url 'group_expense_edit' expense.pk %}" class="btn btn-outline-primary btn-sm me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteExpenseModal-{{ expense.pk }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          <div class="modal fade" id="deleteExpenseModal-{{ expense.pk }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h6 class="modal-title" style="font-weight: 600;">Delete "{{ expense.title }}"?</h6>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="font-size: 14px; color: var(--clr-muted);">
+                  This will remove the expense and its splits.
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <form method="post" action="{% url 'group_expense_delete' expense.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-receipt"></i>
+      <h6>No expenses recorded yet</h6>
+      <a href="{% url 'group_expense_create' group.pk %}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-plus-lg"></i> Add Expense
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Delete group modal -->
+<div class="modal fade" id="deleteGroupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" style="font-weight: 600;">Delete "{{ group.name }}"?</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size: 14px; color: var(--clr-muted);">
+        This will permanently delete the group along with all its expenses, splits, and settlement history.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'group_delete' group.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

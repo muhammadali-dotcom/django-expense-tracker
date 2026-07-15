@@ -2,7 +2,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django import forms
 
-from .models import Category, Transaction, UserProfile
+from .models import Category, Transaction, UserProfile, Person, ExpenseGroup, GroupExpense
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -91,6 +91,69 @@ class TransactionForm(forms.ModelForm):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError('Amount must be a positive value.')
+        return amount
+
+
+# ---------------------------------------------------------------------------
+# Group Expense Management & Smart Settlement System
+# ---------------------------------------------------------------------------
+
+class PersonForm(forms.ModelForm):
+    class Meta:
+        model = Person
+        fields = ['name', 'phone', 'email']
+
+
+class ExpenseGroupForm(forms.ModelForm):
+    class Meta:
+        model = ExpenseGroup
+        fields = ['name', 'description']
+
+
+class GroupMemberAddForm(forms.Form):
+    """Adds an existing Person (owned by the current user) to a group."""
+
+    person = forms.ModelChoiceField(queryset=Person.objects.none(), label='Person')
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user')
+        self.group = kwargs.pop('group')
+        super().__init__(*args, **kwargs)
+        already_in_group = self.group.members.values_list('pk', flat=True)
+        self.fields['person'].queryset = Person.objects.filter(user=self.user).exclude(pk__in=already_in_group)
+
+
+class GroupExpenseForm(forms.ModelForm):
+    """
+    Base fields for a group expense. Split-related fields (split_type and
+    the per-person amounts/percentages) are handled directly in the view
+    since they're dynamic per group membership, not static model fields.
+    """
+
+    SPLIT_CHOICES = [
+        ('equal', 'Equal Split'),
+        ('custom', 'Custom Split'),
+        ('percentage', 'Percentage Split'),
+    ]
+
+    split_type = forms.ChoiceField(choices=SPLIT_CHOICES, initial='equal')
+
+    class Meta:
+        model = GroupExpense
+        fields = ['title', 'description', 'total_amount', 'paid_by', 'category', 'expense_date']
+        widgets = {
+            'expense_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.group = kwargs.pop('group')
+        super().__init__(*args, **kwargs)
+        self.fields['paid_by'].queryset = self.group.members.all()
+
+    def clean_total_amount(self):
+        amount = self.cleaned_data.get('total_amount')
         if amount is not None and amount <= 0:
             raise forms.ValidationError('Amount must be a positive value.')
         return amount

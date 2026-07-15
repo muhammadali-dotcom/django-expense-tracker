@@ -1,84 +1,193 @@
 {% extends 'base.html' %}
+{% block title %}Dashboard – Expenzo{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block topbar_desc %}Overview of your income, expenses, and monthly trends.{% endblock %}
 
 {% block content %}
 
-<h2 class="mb-4 fw-bold">Dashboard</h2>
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon income"><i class="bi bi-arrow-down-circle"></i></div>
+      <div>
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value income">{{ currency_symbol }}{{ income|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon expense"><i class="bi bi-arrow-up-circle"></i></div>
+      <div>
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value expense">{{ currency_symbol }}{{ expense|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon balance"><i class="bi bi-wallet2"></i></div>
+      <div>
+        <div class="stat-label">Net Balance</div>
+        <div class="stat-value" style="color:{% if net_balance >= 0 %}var(--clr-income){% else %}var(--clr-expense){% endif %}">
+          {{ currency_symbol }}{{ net_balance|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-calendar3"></i></div>
+      <div>
+        <div class="stat-label">Period</div>
+        <div class="stat-value" style="font-size:14px; color: var(--clr-text);">{{ start_date }} – {{ end_date }}</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<!-- SUMMARY CARDS -->
+<!-- Date filter -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-funnel" style="color: var(--clr-primary);"></i> Filter Period
+  </div>
+  <div class="card-body">
+    {% if error_msg %}
+      <div class="alert alert-danger mb-3">{{ error_msg }}</div>
+    {% endif %}
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">From Date</label>
+        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">To Date</label>
+        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="bi bi-search"></i> Apply
+        </button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Charts row -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center">
-                <h6 class="text-muted">Total Income</h6>
-                <h3 class="text-success fw-bold">Rs {{ income }}</h3>
-            </div>
-        </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-bar-chart-fill" style="color: var(--clr-primary);"></i> Monthly Trend
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        <canvas id="monthlyChart"></canvas>
+      </div>
     </div>
-
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center">
-                <h6 class="text-muted">Total Expense</h6>
-                <h3 class="text-danger fw-bold">Rs {{ expense }}</h3>
-            </div>
-        </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-pie-chart-fill" style="color: var(--clr-accent);"></i> Expense by Category
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        <canvas id="categoryChart" style="max-height:260px;"></canvas>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- CHART CARD -->
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="text-center mb-3">Expense by Category</h5>
-                <canvas id="expenseChart" style="max-height: 300px;"></canvas>
+<!-- Budget status -->
+{% if budget_status %}
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-shield-check" style="color: var(--clr-income);"></i> Budget Status (This Month)
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for bs in budget_status %}
+      <div class="col-md-6 col-xl-4">
+        <div style="background: var(--clr-card-alt); border: 1px solid var(--clr-border); border-radius: 12px; padding: 16px;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span style="font-weight: 600; font-size: 14px;">{{ bs.category.name }}</span>
+            {% if bs.pct >= 100 %}
+              <span class="badge-over">{{ bs.pct|floatformat:0 }}%</span>
+            {% elif bs.pct >= 80 %}
+              <span class="badge-warn">{{ bs.pct|floatformat:0 }}%</span>
+            {% else %}
+              <span class="badge-ok">{{ bs.pct|floatformat:0 }}%</span>
+            {% endif %}
+          </div>
+          <div class="progress mb-2">
+            <div class="progress-bar"
+              style="width: {{ bs.pct|floatformat:0 }}%; background: {% if bs.pct >= 100 %}var(--clr-expense){% elif bs.pct >= 80 %}var(--clr-warning){% else %}var(--clr-income){% endif %};">
             </div>
+          </div>
+          <div style="font-size: 12px; color: var(--clr-muted);">
+            Spent {{ currency_symbol }}{{ bs.spent|floatformat:2 }} of {{ currency_symbol }}{{ bs.category.budget }}
+          </div>
         </div>
+      </div>
+      {% endfor %}
     </div>
+  </div>
 </div>
+{% endif %}
 
-<!-- SAFE JSON DATA -->
-{{ labels|json_script:"labels-data" }}
-{{ data|json_script:"chart-data" }}
+{% endblock %}
 
-<!-- Chart.js -->
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+{{ monthly_trend|json_script:"monthly-trend-data" }}
+{{ category_trend|json_script:"category-trend-data" }}
 <script>
-    const labels = JSON.parse(
-        document.getElementById('labels-data').textContent
-    );
+  const PALETTE = ['#6c63ff','#14b8a6','#f43f5e','#f59e0b','#10b981','#8b5cf6','#06b6d4','#ec4899'];
 
-    const data = JSON.parse(
-        document.getElementById('chart-data').textContent
-    );
+  // Monthly trend bar chart
+  const mt = JSON.parse(document.getElementById('monthly-trend-data').textContent);
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels: mt.map(d => d.month),
+      datasets: [
+        { label: 'Income',  data: mt.map(d => d.income),  backgroundColor: 'rgba(16,185,129,.7)',  borderRadius: 6 },
+        { label: 'Expense', data: mt.map(d => d.expense), backgroundColor: 'rgba(244,63,94,.7)', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#7c8db5', font: { family: 'Inter', size: 12 } } } },
+      scales: {
+        x: { ticks: { color: '#7c8db5', font: { family: 'Inter', size: 11 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y: { ticks: { color: '#7c8db5', font: { family: 'Inter', size: 11 } }, grid: { color: 'rgba(255,255,255,.05)' } }
+      }
+    }
+  });
 
-    const ctx = document.getElementById('expenseChart').getContext('2d');
-
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: [
-                    '#4CAF50',
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56',
-                    '#9C27B0'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+  // Category pie chart
+  const ct = JSON.parse(document.getElementById('category-trend-data').textContent);
+  const catLabels = ct.datasets.map(d => d.label);
+  const catTotals = ct.datasets.map(d => d.data.reduce((s, v) => s + v, 0));
+  if (catLabels.length > 0) {
+    new Chart(document.getElementById('categoryChart'), {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{ data: catTotals, backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 8 }]
+      },
+      options: {
+        responsive: true,
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#7c8db5', font: { family: 'Inter', size: 12 }, padding: 16, boxWidth: 12 } }
         }
+      }
     });
+  } else {
+    document.getElementById('categoryChart').insertAdjacentHTML('afterend',
+      '<p style="color:var(--clr-muted);font-size:13px;text-align:center;margin-top:16px;">No expense data in this period.</p>');
+  }
 </script>
-
 {% endblock %}

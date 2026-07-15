@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}People – Expenzo{% endblock %}
+{% block topbar_title %}People{% endblock %}
+{% block topbar_desc %}People you split group expenses with.{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h5 class="page-heading mb-0">Manage <span>People</span></h5>
+  <a href="{% url 'person_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Person
+  </a>
+</div>
+
+{% if people %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr><th>Name</th><th>Phone</th><th>Email</th><th class="text-end">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for person in people %}
+          <tr>
+            <td style="font-weight: 600;">{{ person.name }}</td>
+            <td>{{ person.phone|default:"—" }}</td>
+            <td>{{ person.email|default:"—" }}</td>
+            <td class="text-end">
+              <a href="{% url 'person_edit' person.pk %}" class="btn btn-outline-primary btn-sm me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn btn-outline-danger btn-sm"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal-{{ person.pk }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          <div class="modal fade" id="deleteModal-{{ person.pk }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h6 class="modal-title" style="font-weight: 600;">Delete "{{ person.name }}"?</h6>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="font-size: 14px; color: var(--clr-muted);">
+                  This will remove the person from all groups and delete their expense history.
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <form method="post" action="{% url 'person_delete' person.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-person"></i>
+      <h6>No people yet</h6>
+      <p style="color: var(--clr-muted); font-size: 13px;">Add people so you can include them in expense groups.</p>
+      <a href="{% url 'person_create' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-plus-lg"></i> Add Person
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

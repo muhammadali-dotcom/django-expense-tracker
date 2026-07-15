@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Delete Transaction – Expenzo{% endblock %}
-{% block topbar_title %}Delete Transaction{% endblock %}
-{% block topbar_desc %}Confirm removal of this transaction.{% endblock %}
+{% block title %}Delete Group – Expenzo{% endblock %}
+{% block topbar_title %}Delete Group{% endblock %}
+{% block topbar_desc %}Confirm removal of this group.{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -15,13 +15,13 @@
         <div style="width:64px; height:64px; background: rgba(244,63,94,.12); border-radius: 50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 20px; font-size:28px;">
           🗑️
         </div>
-        <h5 style="color: var(--clr-white); font-weight: 700;">Delete this transaction?</h5>
+        <h5 style="color: var(--clr-white); font-weight: 700;">Delete "{{ object.name }}"?</h5>
         <p style="color: var(--clr-muted); font-size: 14px; margin-bottom: 28px;">
-          This action cannot be undone. The transaction will be permanently removed from your records.
+          This will permanently delete the group along with all its expenses, splits, and settlement history.
         </p>
         <form method="post" class="d-flex justify-content-center gap-3">
           {% csrf_token %}
-          <a href="{% url 'transaction_list' %}" class="btn btn-secondary">
+          <a href="{% url 'group_list' %}" class="btn btn-secondary">
             <i class="bi bi-x-lg"></i> Cancel
           </a>
           <button type="submit" class="btn btn-danger">

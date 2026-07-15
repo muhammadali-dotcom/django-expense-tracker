@@ -1,49 +1,101 @@
 {% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Profile – Expenzo{% endblock %}
+{% block topbar_title %}Profile Settings{% endblock %}
+{% block topbar_desc %}Manage your password and currency preferences.{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 800px;">
-  <h2 class="mb-4">Profile Settings</h2>
-  <div class="row">
-    <!-- Password Change Form -->
-    <div class="col-md-6">
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">Change Password</div>
-        <div class="card-body">
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="password" />
-            {{ password_form.non_field_errors }}
-            {% for field in password_form.visible_fields %}
-              <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field|add_class:"form-control" }}
-                {{ field.errors }}
-              </div>
-            {% endfor %}
-            <button type="submit" class="btn btn-success w-100">Update Password</button>
-          </form>
-        </div>
+<div class="row mb-4 align-items-center">
+  <div class="col">
+    <h5 class="page-heading mb-0">Account <span>Settings</span></h5>
+  </div>
+</div>
+
+<!-- User info card -->
+<div class="card mb-4">
+  <div class="card-body d-flex align-items-center gap-4">
+    <div style="width:68px; height:68px; background: var(--gradient-main); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; color:#fff; flex-shrink:0;">
+      {{ request.user.username|first|upper }}
+    </div>
+    <div>
+      <div style="font-size: 18px; font-weight: 700; color: var(--clr-white);">{{ request.user.username }}</div>
+      <div style="font-size: 13.5px; color: var(--clr-muted);">{{ request.user.email }}</div>
+      <div style="font-size: 12px; color: var(--clr-muted); margin-top: 4px;">
+        Member since {{ request.user.date_joined|date:"M Y" }}
       </div>
     </div>
-    <!-- Currency Preference Form -->
-    <div class="col-md-6">
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-secondary text-white">Currency Preference</div>
-        <div class="card-body">
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="currency" />
-            {{ currency_form.non_field_errors }}
-            {% for field in currency_form.visible_fields %}
-              <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field|add_class:"form-select" }}
-                {{ field.errors }}
-              </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Password Change -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-lock-fill" style="color: var(--clr-primary);"></i> Change Password
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="password">
+          {% if password_form.non_field_errors %}
+            <div class="alert alert-danger mb-3">{{ password_form.non_field_errors }}</div>
+          {% endif %}
+          {% for field in password_form.visible_fields %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.errors %}
+              {{ field|add_class:"form-control is-invalid" }}
+            {% else %}
+              {{ field|add_class:"form-control" }}
+            {% endif %}
+            {% for error in field.errors %}
+              <div style="color: var(--clr-expense); font-size: 12px; margin-top: 4px;">{{ error }}</div>
             {% endfor %}
-            <button type="submit" class="btn btn-primary w-100">Save Currency</button>
-          </form>
-        </div>
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-shield-lock"></i> Update Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Currency Preference -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-currency-exchange" style="color: var(--clr-accent);"></i> Currency Preference
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="currency">
+          {% if currency_form.non_field_errors %}
+            <div class="alert alert-danger mb-3">{{ currency_form.non_field_errors }}</div>
+          {% endif %}
+          {% for field in currency_form.visible_fields %}
+          <div class="mb-4">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.errors %}
+              {{ field|add_class:"form-select is-invalid" }}
+            {% else %}
+              {{ field|add_class:"form-select" }}
+            {% endif %}
+            {% for error in field.errors %}
+              <div style="color: var(--clr-expense); font-size: 12px; margin-top: 4px;">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          <div style="background: rgba(20,184,166,.08); border: 1px solid rgba(20,184,166,.2); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--clr-muted);">
+            <i class="bi bi-info-circle" style="color: var(--clr-accent);"></i>
+            The selected currency symbol will appear on your dashboard and transaction list.
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-save"></i> Save Preference
+          </button>
+        </form>
       </div>
     </div>
   </div>

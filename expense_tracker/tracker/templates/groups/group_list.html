@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Groups – Expenzo{% endblock %}
+{% block topbar_title %}Groups{% endblock %}
+{% block topbar_desc %}All the expense groups you manage.{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h5 class="page-heading mb-0">Expense <span>Groups</span></h5>
+  <a href="{% url 'group_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Group
+  </a>
+</div>
+
+{% if groups %}
+<div class="row g-3">
+  {% for group in groups %}
+  <div class="col-md-6 col-xl-4">
+    <a href="{% url 'group_detail' group.pk %}" class="card h-100" style="display:block; color: inherit;">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div style="width:40px; height:40px; background: rgba(108,99,255,.15); border-radius: 10px; display:flex; align-items:center; justify-content:center; color: var(--clr-primary); font-size: 18px;">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <span style="font-weight: 700; font-size: 15px; color: var(--clr-white);">{{ group.name }}</span>
+        </div>
+        <p style="color: var(--clr-muted); font-size: 13px; min-height: 18px;">{{ group.description|default:"No description" }}</p>
+        <div style="font-size: 12.5px; color: var(--clr-muted);">
+          <i class="bi bi-person"></i> {{ group.members.count }} member{{ group.members.count|pluralize }}
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <h6>No groups yet</h6>
+      <p style="color: var(--clr-muted); font-size: 13px;">Create a group to start splitting expenses with friends.</p>
+      <a href="{% url 'group_create' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-plus-lg"></i> Create Group
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

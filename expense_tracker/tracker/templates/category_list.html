@@ -1,158 +1,128 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}Categories – Expenzo{% endblock %}
+{% block topbar_title %}Categories{% endblock %}
+{% block topbar_desc %}Organize spending into categories and track budgets.{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2>Categories</h2>
-  <a href="{% url 'category_create' %}"
-     class="btn btn-primary"
-     style="min-height: 44px;">
-    + Create Category
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h5 class="page-heading mb-0">Manage <span>Categories</span></h5>
+  <a href="{% url 'category_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Category
   </a>
 </div>
 
-{% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-  {% endfor %}
-{% endif %}
-
 {% if categories %}
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Name</th>
-          <th>Budget</th>
-          <th>Spent (this month)</th>
-          <th>Status</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for category in categories %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
           <tr>
-            {# Name #}
-            <td>{{ category.name }}</td>
-
-            {# Budget #}
+            <th>Name</th>
+            <th>Budget</th>
+            <th>Spent (this month)</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category in categories %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width:32px; height:32px; background: rgba(108,99,255,.15); border-radius: 8px; display:flex; align-items:center; justify-content:center; color: var(--clr-primary); font-size: 14px;">
+                  <i class="bi bi-tag-fill"></i>
+                </div>
+                <span style="font-weight: 600; font-size: 14px;">{{ category.name }}</span>
+              </div>
+            </td>
             <td>
               {% if category.budget %}
-                {{ category.budget }}
+                <span style="font-weight: 600; color: var(--clr-text);">{{ currency_symbol|default:"$" }}{{ category.budget }}</span>
               {% else %}
-                <span class="text-muted">—</span>
+                <span style="color: var(--clr-muted);">No budget</span>
               {% endif %}
             </td>
-
-            {# Spent and Status — resolved from budget_status context #}
             {% if category.budget %}
-              {# Category has a budget: find its entry in budget_status #}
-              {% with bs_entry=None %}
-                {% for bs in budget_status %}
-                  {% if bs.category.pk == category.pk %}
-                    {# Spent column #}
-                    <td data-label="Spent">{{ bs.spent|floatformat:2 }}</td>
-
-                    {# Status badge column #}
-                    <td data-label="Status">
+              {% for bs in budget_status %}
+                {% if bs.category.pk == category.pk %}
+                  <td style="font-size: 13.5px;">{{ currency_symbol|default:"$" }}{{ bs.spent|floatformat:2 }}</td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div class="progress" style="flex:1; max-width: 80px;">
+                        <div class="progress-bar"
+                          style="width: {{ bs.pct|floatformat:0 }}%;
+                                 background: {% if bs.pct >= 100 %}var(--clr-expense){% elif bs.pct >= 80 %}var(--clr-warning){% else %}var(--clr-income){% endif %};">
+                        </div>
+                      </div>
                       {% if bs.pct >= 100 %}
-                        <span class="badge bg-danger">Over budget ({{ bs.pct|floatformat:0 }}%)</span>
+                        <span class="badge-over">{{ bs.pct|floatformat:0 }}%</span>
                       {% elif bs.pct >= 80 %}
-                        <span class="badge bg-warning text-dark">Near limit ({{ bs.pct|floatformat:0 }}%)</span>
+                        <span class="badge-warn">{{ bs.pct|floatformat:0 }}%</span>
                       {% else %}
-                        <span class="badge bg-success">OK ({{ bs.pct|floatformat:0 }}%)</span>
+                        <span class="badge-ok">{{ bs.pct|floatformat:0 }}%</span>
                       {% endif %}
-                    </td>
-                  {% endif %}
-                {% endfor %}
-              {% endwith %}
+                    </div>
+                  </td>
+                {% endif %}
+              {% endfor %}
             {% else %}
-              {# No budget set — show dashes, no badge #}
-              <td><span class="text-muted">—</span></td>
-              <td></td>
+              <td><span style="color: var(--clr-muted);">—</span></td>
+              <td><span style="color: var(--clr-muted);">—</span></td>
             {% endif %}
-
-            {# Actions #}
             <td class="text-end">
-              <a href="{% url 'category_edit' category.pk %}"
-                 class="btn btn-outline-secondary btn-sm"
-                 style="min-height: 44px;">
-                Rename
+              <a href="{% url 'category_edit' category.pk %}" class="btn btn-outline-primary btn-sm me-1">
+                <i class="bi bi-pencil"></i>
               </a>
-              <button type="button"
-                      class="btn btn-outline-danger btn-sm ms-1"
-                      style="min-height: 44px;"
-                      data-bs-toggle="modal"
-                      data-bs-target="#deleteModal-{{ category.pk }}">
-                Delete
+              <button type="button" class="btn btn-outline-danger btn-sm"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal-{{ category.pk }}">
+                <i class="bi bi-trash"></i>
               </button>
             </td>
           </tr>
 
-          {# ── Inline delete-confirmation modal (one per row) ── #}
-          <div class="modal fade"
-               id="deleteModal-{{ category.pk }}"
-               tabindex="-1"
-               aria-labelledby="deleteModalLabel-{{ category.pk }}"
-               aria-hidden="true">
+          <!-- Delete Modal -->
+          <div class="modal fade" id="deleteModal-{{ category.pk }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="deleteModalLabel-{{ category.pk }}">
-                    Delete "{{ category.name }}"?
-                  </h5>
-                  <button type="button"
-                          class="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"></button>
+                  <h6 class="modal-title" style="font-weight: 600;">Delete "{{ category.name }}"?</h6>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                  <p>
-                    Are you sure you want to delete
-                    <strong>{{ category.name }}</strong>?
-                    Existing transactions linked to this category will have
-                    their category cleared.
-                  </p>
+                <div class="modal-body" style="font-size: 14px; color: var(--clr-muted);">
+                  This will remove the category. Existing transactions linked to it will have their category cleared.
                 </div>
                 <div class="modal-footer">
-                  <button type="button"
-                          class="btn btn-secondary"
-                          style="min-height: 44px;"
-                          data-bs-dismiss="modal">
-                    Cancel
-                  </button>
-                  <form method="post"
-                        action="{% url 'category_delete' category.pk %}"
-                        class="d-inline">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <form method="post" action="{% url 'category_delete' category.pk %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit"
-                            class="btn btn-danger"
-                            style="min-height: 44px;">
-                      Yes, delete
+                    <button type="submit" class="btn btn-danger btn-sm">
+                      <i class="bi bi-trash"></i> Delete
                     </button>
                   </form>
                 </div>
               </div>
             </div>
           </div>
-          {# ── end modal ── #}
-
-        {% endfor %}
-      </tbody>
-    </table>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+</div>
 
 {% else %}
-  {# Empty state #}
-  <div class="text-center text-muted py-5">
-    <p class="mb-2">No categories yet.</p>
-    <a href="{% url 'category_create' %}"
-       class="btn btn-primary"
-       style="min-height: 44px;">
-      Create your first category
-    </a>
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-tag"></i>
+      <h6>No categories yet</h6>
+      <p style="color: var(--clr-muted); font-size: 13px;">Create categories to organize your transactions and track budgets.</p>
+      <a href="{% url 'category_create' %}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-plus-lg"></i> Create Category
+      </a>
+    </div>
   </div>
+</div>
 {% endif %}
 {% endblock %}

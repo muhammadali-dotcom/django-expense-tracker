@@ -1,6 +1,20 @@
 from django.contrib import admin
-from .models import Category, Transaction
+from .models import (
+    Category,
+    Transaction,
+    Person,
+    ExpenseGroup,
+    GroupMember,
+    GroupExpense,
+    ExpenseSplit,
+    Settlement,
+)
 
 admin.site.register(Category)
 admin.site.register(Transaction)
-    
+admin.site.register(Person)
+admin.site.register(ExpenseGroup)
+admin.site.register(GroupMember)
+admin.site.register(GroupExpense)
+admin.site.register(ExpenseSplit)
+admin.site.register(Settlement)
