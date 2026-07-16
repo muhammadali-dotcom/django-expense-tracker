@@ -653,7 +653,7 @@ def group_dashboard(request):
     for expense in filtered_expenses:
         label = expense.expense_date.strftime('%Y-%m')
         monthly[label] = monthly.get(label, Decimal('0.00')) + expense.total_amount
-    monthly_expenses = [{'month': m, 'total': float(monthly[m])} for m in sorted(monthly)]
+    monthly_expenses = [{'month': m, 'total': round(float(monthly[m]))} for m in sorted(monthly)]
 
     category_totals = list(
         filtered_expenses.values('category')
@@ -661,7 +661,7 @@ def group_dashboard(request):
         .order_by('-total')
     )
     for row in category_totals:
-        row['total'] = float(row['total'])
+        row['total'] = round(float(row['total']))
 
     settlement_groups = groups.filter(pk=selected_group_id) if selected_group_id else groups
     pending_settlements = []

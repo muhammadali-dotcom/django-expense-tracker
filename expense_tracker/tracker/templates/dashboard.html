@@ -12,7 +12,7 @@
       <div class="stat-icon income"><i class="bi bi-arrow-down-circle"></i></div>
       <div>
         <div class="stat-label">Total Income</div>
-        <div class="stat-value income">{{ currency_symbol }}{{ income|floatformat:2 }}</div>
+        <div class="stat-value income">{{ currency_symbol }}{{ income|floatformat:0 }}</div>
       </div>
     </div>
   </div>
@@ -21,7 +21,7 @@
       <div class="stat-icon expense"><i class="bi bi-arrow-up-circle"></i></div>
       <div>
         <div class="stat-label">Total Expenses</div>
-        <div class="stat-value expense">{{ currency_symbol }}{{ expense|floatformat:2 }}</div>
+        <div class="stat-value expense">{{ currency_symbol }}{{ expense|floatformat:0 }}</div>
       </div>
     </div>
   </div>
@@ -31,7 +31,7 @@
       <div>
         <div class="stat-label">Net Balance</div>
         <div class="stat-value" style="color:{% if net_balance >= 0 %}var(--clr-income){% else %}var(--clr-expense){% endif %}">
-          {{ currency_symbol }}{{ net_balance|floatformat:2 }}
+          {{ currency_symbol }}{{ net_balance|floatformat:0 }}
         </div>
       </div>
     </div>
@@ -126,7 +126,7 @@
             </div>
           </div>
           <div style="font-size: 12px; color: var(--clr-muted);">
-            Spent {{ currency_symbol }}{{ bs.spent|floatformat:2 }} of {{ currency_symbol }}{{ bs.category.budget }}
+            Spent {{ currency_symbol }}{{ bs.spent|floatformat:0 }} of {{ currency_symbol }}{{ bs.category.budget|floatformat:0 }}
           </div>
         </div>
       </div>

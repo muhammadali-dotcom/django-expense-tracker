@@ -113,15 +113,19 @@ def get_monthly_trend(user, start_date: date, end_date: date):
             date__lte=period_end,
         )
 
-        income = float(
-            base_qs.filter(transaction_type="Income")
-            .aggregate(total=Sum("amount"))["total"]
-            or 0
+        income = round(
+            float(
+                base_qs.filter(transaction_type="Income")
+                .aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
         )
-        expense = float(
-            base_qs.filter(transaction_type="Expense")
-            .aggregate(total=Sum("amount"))["total"]
-            or 0
+        expense = round(
+            float(
+                base_qs.filter(transaction_type="Expense")
+                .aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
         )
 
         results.append(
@@ -178,15 +182,17 @@ def get_category_trend(user, start_date: date, end_date: date):
             period_start = max(start_date, date(year, month, 1))
             period_end = min(end_date, date(year, month, last_day))
 
-            total = float(
-                Transaction.objects.filter(
-                    user=user,
-                    category=cat,
-                    transaction_type="Expense",
-                    date__gte=period_start,
-                    date__lte=period_end,
-                ).aggregate(total=Sum("amount"))["total"]
-                or 0
+            total = round(
+                float(
+                    Transaction.objects.filter(
+                        user=user,
+                        category=cat,
+                        transaction_type="Expense",
+                        date__gte=period_start,
+                        date__lte=period_end,
+                    ).aggregate(total=Sum("amount"))["total"]
+                    or 0
+                )
             )
             data.append(total)
 

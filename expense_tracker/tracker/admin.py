@@ -17,4 +17,9 @@ admin.site.register(ExpenseGroup)
 admin.site.register(GroupMember)
 admin.site.register(GroupExpense)
 admin.site.register(ExpenseSplit)
-admin.site.register(Settlement)
+
+
+@admin.register(Settlement)
+class SettlementAdmin(admin.ModelAdmin):
+    list_display = ('group', 'from_person', 'to_person', 'amount', 'status', 'created_at')
+    list_filter = ('status', 'group')

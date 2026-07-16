@@ -178,7 +178,7 @@ class Settlement(models.Model):
     from_person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='settlements_owed')
     to_person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='settlements_receivable')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='paid')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

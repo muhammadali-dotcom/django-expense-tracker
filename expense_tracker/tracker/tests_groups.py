@@ -157,6 +157,35 @@ class BalanceCalculationTests(GroupExpenseTestCase):
         self.assertEqual(balances[self.ali], Decimal('0.00'))
         self.assertEqual(balances[self.rafay], Decimal('260.00'))
 
+    def test_settlement_defaults_to_pending_not_paid(self):
+        """
+        Regression test: Settlement.status must default to 'pending'. If it
+        ever defaults to 'paid', calculate_group_balances() (which only nets
+        out status='paid' settlements) will silently zero out a person's
+        real outstanding debt the moment a Settlement row is created without
+        an explicit status - e.g. via the admin, a fixture, or a future code
+        path that forgets to pass status= explicitly.
+        """
+        settlement = Settlement.objects.create(
+            group=self.group, from_person=self.ali, to_person=self.rafay,
+            amount=Decimal('70.00'),
+        )
+        self.assertEqual(settlement.status, 'pending')
+
+        # A pending settlement must NOT affect balances - Ali still owes.
+        balances = calculate_group_balances(self.group.id)
+        self.assertEqual(balances[self.ali], Decimal('-70.00'))
+        self.assertEqual(balances[self.rafay], Decimal('330.00'))
+
+    def test_unrelated_group_member_not_marked_settled(self):
+        """
+        A member who wasn't part of this expense at all must not appear
+        with a balance of 0 ("Settled") - they should have no balance entry.
+        """
+        balances = calculate_group_balances(self.group.id)
+        outsider = Person.objects.create(user=self.user, name='Outsider')
+        self.assertNotIn(outsider, balances)
+
 
 # 8. Settlement generation ---------------------------------------------------------
 
@@ -322,3 +351,66 @@ class GroupViewSmokeTests(GroupExpenseTestCase):
         self.client.force_login(other_user)
         response = self.client.get(f'/groups/{self.group.pk}/')
         self.assertEqual(response.status_code, 404)
+
+    def test_equal_split_shows_correct_balances_right_after_saving(self):
+        """
+        End-to-end: create an equal-split expense via the real view, then
+        check nobody but the payer shows a zero/"Settled" balance - only
+        an actual paid Settlement should ever zero someone out.
+        """
+        response = self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Trip', 'description': '', 'total_amount': '400.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'equal',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        balances = calculate_group_balances(self.group.id)
+        # Rafay paid 400 and owes himself 100 -> net +300, not settled.
+        self.assertEqual(balances[self.rafay], Decimal('300.00'))
+        # Everyone else owes their 100 share - none of them are settled.
+        for person in (self.ali, self.asim, self.anas):
+            self.assertEqual(balances[person], Decimal('-100.00'))
+            self.assertNotEqual(balances[person], Decimal('0.00'))
+
+        # No Settlement has been recorded, so none of the debts are paid.
+        self.assertFalse(Settlement.objects.filter(group=self.group, status='paid').exists())
+
+    def test_custom_split_shows_correct_balances_right_after_saving(self):
+        response = self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Groceries', 'description': '', 'total_amount': '400.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'custom',
+            f'share_{self.ali.pk}': '70', f'share_{self.asim.pk}': '80',
+            f'share_{self.anas.pk}': '80', f'share_{self.rafay.pk}': '170',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        balances = calculate_group_balances(self.group.id)
+        self.assertEqual(balances[self.ali], Decimal('-70.00'))
+        self.assertEqual(balances[self.asim], Decimal('-80.00'))
+        self.assertEqual(balances[self.anas], Decimal('-80.00'))
+        self.assertEqual(balances[self.rafay], Decimal('230.00'))
+        self.assertFalse(Settlement.objects.filter(group=self.group, status='paid').exists())
+
+    def test_settlement_only_marked_paid_via_explicit_action(self):
+        """
+        Creating an expense must never itself create a Settlement row.
+        Only the explicit "mark as paid" action should ever do that, and
+        only for the amount actually confirmed.
+        """
+        self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Trip', 'description': '', 'total_amount': '400.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'equal',
+        })
+        self.assertEqual(Settlement.objects.count(), 0)
+
+        self.client.post(f'/groups/{self.group.pk}/settlements/mark-paid/', {
+            'from_person': self.ali.pk, 'to_person': self.rafay.pk, 'amount': '100.00',
+        })
+        balances = calculate_group_balances(self.group.id)
+        self.assertEqual(balances[self.ali], Decimal('0.00'))
+        # Asim and Anas are unaffected - still owe their share.
+        self.assertEqual(balances[self.asim], Decimal('-100.00'))
+        self.assertEqual(balances[self.anas], Decimal('-100.00'))

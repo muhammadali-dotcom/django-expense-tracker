@@ -95,7 +95,7 @@
             <td style="font-size: 13.5px;">{{ tx.description|default:"—" }}</td>
             <td class="text-end" style="font-weight: 600;">
               <span style="color: {% if tx.transaction_type == 'Income' %}var(--clr-income){% else %}var(--clr-expense){% endif %}">
-                {% if tx.transaction_type == 'Income' %}+{% else %}-{% endif %}{{ currency_symbol }}{{ tx.amount|floatformat:2 }}
+                {% if tx.transaction_type == 'Income' %}+{% else %}-{% endif %}{{ currency_symbol }}{{ tx.amount|floatformat:0 }}
               </span>
             </td>
             <td class="text-end">

@@ -38,7 +38,7 @@
             </td>
             <td>
               {% if category.budget %}
-                <span style="font-weight: 600; color: var(--clr-text);">{{ currency_symbol|default:"$" }}{{ category.budget }}</span>
+                <span style="font-weight: 600; color: var(--clr-text);">{{ currency_symbol|default:"$" }}{{ category.budget|floatformat:0 }}</span>
               {% else %}
                 <span style="color: var(--clr-muted);">No budget</span>
               {% endif %}
@@ -46,7 +46,7 @@
             {% if category.budget %}
               {% for bs in budget_status %}
                 {% if bs.category.pk == category.pk %}
-                  <td style="font-size: 13.5px;">{{ currency_symbol|default:"$" }}{{ bs.spent|floatformat:2 }}</td>
+                  <td style="font-size: 13.5px;">{{ currency_symbol|default:"$" }}{{ bs.spent|floatformat:0 }}</td>
                   <td>
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <div class="progress" style="flex:1; max-width: 80px;">

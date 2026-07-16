@@ -11,7 +11,7 @@
       <div class="stat-icon expense"><i class="bi bi-receipt"></i></div>
       <div>
         <div class="stat-label">Total Group Expenses</div>
-        <div class="stat-value expense">{{ stats.total_expenses|floatformat:2 }}</div>
+        <div class="stat-value expense">{{ stats.total_expenses|floatformat:0 }}</div>
         <div class="stat-sub">Across all groups</div>
       </div>
     </div>
@@ -21,7 +21,7 @@
       <div class="stat-icon income"><i class="bi bi-arrow-down-circle"></i></div>
       <div>
         <div class="stat-label">You'll Receive</div>
-        <div class="stat-value income">{{ stats.receive_total|floatformat:2 }}</div>
+        <div class="stat-value income">{{ stats.receive_total|floatformat:0 }}</div>
         <div class="stat-sub">Owed to you across groups</div>
       </div>
     </div>
@@ -31,7 +31,7 @@
       <div class="stat-icon balance"><i class="bi bi-arrow-up-circle"></i></div>
       <div>
         <div class="stat-label">You Need to Pay</div>
-        <div class="stat-value" style="color: var(--danger);">{{ stats.pay_total|floatformat:2 }}</div>
+        <div class="stat-value" style="color: var(--danger);">{{ stats.pay_total|floatformat:0 }}</div>
         <div class="stat-sub">Owed by you across groups</div>
       </div>
     </div>
@@ -145,8 +145,8 @@
               </span>
             </div>
             <div class="d-flex align-items-center gap-3">
-              <span class="balance-positive">{{ entry.amount|floatformat:2 }}</span>
-              <form method="post" action="{% url 'settlement_mark_paid' entry.group.pk %}" onsubmit="return confirm('Mark {{ entry.from.name }} → {{ entry.to.name }} ({{ entry.amount|floatformat:2 }}) as paid?');">
+              <span class="balance-positive">{{ entry.amount|floatformat:0 }}</span>
+              <form method="post" action="{% url 'settlement_mark_paid' entry.group.pk %}" onsubmit="return confirm('Mark {{ entry.from.name }} → {{ entry.to.name }} ({{ entry.amount|floatformat:0 }}) as paid?');">
                 {% csrf_token %}
                 <input type="hidden" name="from_person" value="{{ entry.from.pk }}">
                 <input type="hidden" name="to_person" value="{{ entry.to.pk }}">
@@ -215,7 +215,7 @@
             </td>
             <td><span class="badge-category">{{ expense.category }}</span></td>
             <td>{{ expense.expense_date }}</td>
-            <td class="text-end" style="font-weight: 700;">{{ expense.total_amount }}</td>
+            <td class="text-end" style="font-weight: 700;">{{ expense.total_amount|floatformat:0 }}</td>
           </tr>
           {% endfor %}
         </tbody>
