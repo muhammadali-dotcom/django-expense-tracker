@@ -22,6 +22,33 @@
 
 A quick walkthrough: sign in → view the dashboard → add a transaction → see it reflected in the transaction list.
 
+## Group expenses & smart settlements
+
+<div align="center">
+  <img src="screenshots/demo-groups.gif" alt="Expenzo group expense demo" width="800" />
+</div>
+
+Split a shared trip or bill across a group, and Expenzo works out the minimum number of payments needed to settle up — no more everyone paying everyone back individually.
+
+<table>
+  <tr>
+    <td align="center"><b>Groups Dashboard</b></td>
+    <td align="center"><b>Group Detail & Settlements</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/group-dashboard.png" width="400" /></td>
+    <td><img src="screenshots/group-detail.png" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Groups List</b></td>
+    <td align="center"><b>People</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/group-list.png" width="400" /></td>
+    <td><img src="screenshots/people-list.png" width="400" /></td>
+  </tr>
+</table>
+
 ## Features
 
 - **Transaction tracking** — log income and expenses with category, amount, date, and notes
