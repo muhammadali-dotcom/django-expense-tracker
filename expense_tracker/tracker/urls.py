@@ -5,6 +5,7 @@ from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
+    path('health/', views.health_check, name='health_check'),
     path('', views.dashboard, name='dashboard'),
     path('register/', views.user_register, name='register'),
     # Backward-compat redirect: /add/ → /transactions/add/

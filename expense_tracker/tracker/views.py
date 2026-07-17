@@ -6,7 +6,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Sum
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
@@ -27,8 +27,10 @@ from .group_services import (
     calculate_equal_shares, validate_custom_split, calculate_percentage_shares,
     calculate_group_balances, generate_settlement_plan, get_dashboard_stats,
 )
-from django.utils import timezone
 from datetime import datetime
+
+from django.utils import timezone
+from django.core.validators import validate_integer
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +76,13 @@ class TransactionListView(LoginRequiredMixin, FilterView):
 @login_required
 def dashboard(request):
     """Dashboard view with optional date-range filter and chart data."""
+    today = timezone.now().date()
+    default_start_date = today.replace(day=1)
+    # End of month calculation
+    import calendar
+    last_day = calendar.monthrange(today.year, today.month)[1]
+    default_end_date = today.replace(day=last_day)
+
     # Parse dates from GET parameters
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
@@ -84,16 +93,12 @@ def dashboard(request):
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             if start_date > end_date:
                 error_msg = 'Start date cannot be after end date.'
+                start_date, end_date = default_start_date, default_end_date
         except ValueError:
             error_msg = 'Invalid date format. Use YYYY-MM-DD.'
+            start_date, end_date = default_start_date, default_end_date
     else:
-        # Default to current month
-        today = timezone.now().date()
-        start_date = today.replace(day=1)
-        # End of month calculation
-        import calendar
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        end_date = today.replace(day=last_day)
+        start_date, end_date = default_start_date, default_end_date
 
     # Base queryset filtered by user and date range
     base_qs = Transaction.objects.filter(user=request.user, date__gte=start_date, date__lte=end_date)
@@ -179,7 +184,11 @@ class DeleteTransactionView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 import csv
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+
+
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
 
 @login_required
 def export_csv(request):
@@ -503,6 +512,15 @@ def _parse_decimal(raw_value):
     return Decimal(raw_value)
 
 
+def _parse_date_filter(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(raw_value, '%Y-%m-%d').date()
+    except ValueError as exc:
+        raise ValueError('Invalid date format. Use YYYY-MM-DD.') from exc
+
+
 @login_required
 def group_expense_create(request, pk):
     group = get_object_or_404(ExpenseGroup, pk=pk, user=request.user)
@@ -605,8 +623,8 @@ class GroupExpenseDeleteView(LoginRequiredMixin, DeleteView):
 @require_POST
 def settlement_mark_paid(request, pk):
     group = get_object_or_404(ExpenseGroup, pk=pk, user=request.user)
-    from_person = get_object_or_404(Person, pk=request.POST.get('from_person'), user=request.user)
-    to_person = get_object_or_404(Person, pk=request.POST.get('to_person'), user=request.user)
+    from_person = get_object_or_404(Person, pk=request.POST.get('from_person'), user=request.user, groups=group)
+    to_person = get_object_or_404(Person, pk=request.POST.get('to_person'), user=request.user, groups=group)
     try:
         amount = Decimal(request.POST.get('amount', '0'))
     except InvalidOperation:
@@ -615,6 +633,21 @@ def settlement_mark_paid(request, pk):
 
     if amount <= 0:
         messages.error(request, 'Settlement amount must be positive.')
+        return redirect('group_detail', pk=pk)
+
+    settlement_plan = generate_settlement_plan(group.id)
+    matching_entry = next(
+        (
+            entry for entry in settlement_plan
+            if entry['from'].pk == from_person.pk and entry['to'].pk == to_person.pk
+        ),
+        None,
+    )
+    if matching_entry is None:
+        messages.error(request, 'That settlement is not currently owed for this group.')
+        return redirect('group_detail', pk=pk)
+    if amount > matching_entry['amount']:
+        messages.error(request, 'Settlement amount cannot exceed the outstanding balance.')
         return redirect('group_detail', pk=pk)
 
     Settlement.objects.create(
@@ -638,12 +671,34 @@ def group_dashboard(request):
     start_date = request.GET.get('start_date') or ''
     end_date = request.GET.get('end_date') or ''
     selected_group_id = request.GET.get('group') or ''
+    error_msg = None
 
     filtered_expenses = GroupExpense.objects.filter(group__user=request.user)
-    if start_date:
-        filtered_expenses = filtered_expenses.filter(expense_date__gte=start_date)
-    if end_date:
-        filtered_expenses = filtered_expenses.filter(expense_date__lte=end_date)
+    try:
+        parsed_start_date = _parse_date_filter(start_date)
+        parsed_end_date = _parse_date_filter(end_date)
+        if parsed_start_date and parsed_end_date and parsed_start_date > parsed_end_date:
+            raise ValueError('Start date cannot be after end date.')
+    except ValueError as exc:
+        error_msg = str(exc) if str(exc) else 'Invalid date format. Use YYYY-MM-DD.'
+        start_date = end_date = ''
+        parsed_start_date = parsed_end_date = None
+
+    if parsed_start_date:
+        filtered_expenses = filtered_expenses.filter(expense_date__gte=parsed_start_date)
+    if parsed_end_date:
+        filtered_expenses = filtered_expenses.filter(expense_date__lte=parsed_end_date)
+    if selected_group_id:
+        try:
+            validate_integer(selected_group_id)
+        except ValidationError:
+            selected_group_id = ''
+            error_msg = error_msg or 'Invalid group filter.'
+        else:
+            if not groups.filter(pk=selected_group_id).exists():
+                selected_group_id = ''
+                error_msg = error_msg or 'Invalid group filter.'
+
     if selected_group_id:
         filtered_expenses = filtered_expenses.filter(group_id=selected_group_id)
 
@@ -679,6 +734,7 @@ def group_dashboard(request):
         'start_date': start_date,
         'end_date': end_date,
         'selected_group_id': selected_group_id,
+        'error_msg': error_msg,
     })
 
 

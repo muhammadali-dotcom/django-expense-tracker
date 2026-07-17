@@ -92,15 +92,14 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button type="button" class="btn-icon" aria-label="Notifications">
-        <i class="bi bi-bell"></i>
-        <span class="notif-dot" aria-hidden="true"></span>
-      </button>
+      <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> New Transaction
+      </a>
       <div class="topbar-user">
         <div class="avatar">{{ request.user.username|first|upper }}</div>
         <div>
           {{ request.user.username }}
-          <span class="plan-label">Account</span>
+          <span class="plan-label">Workspace</span>
         </div>
       </div>
     </div>

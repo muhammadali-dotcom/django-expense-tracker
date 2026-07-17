@@ -64,6 +64,9 @@
     <i class="bi bi-funnel" style="color: var(--primary);"></i> Filter Period
   </div>
   <div class="card-body">
+    {% if error_msg %}
+      <div class="alert alert-danger mb-3">{{ error_msg }}</div>
+    {% endif %}
     <form method="get" class="row g-3 align-items-end">
       <div class="col-md-3">
         <label class="form-label" for="dash-start-date">From Date</label>

@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from tracker.forms import UserRegistrationForm
+from tracker.models import Transaction
 
 
 class UserRegistrationFormTests(TestCase):
@@ -103,3 +104,26 @@ class UserRegistrationFormTests(TestCase):
         form = UserRegistrationForm(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn('password2', form.errors)
+
+
+class DashboardFilterTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='owner', password='irrelevant')
+        self.client.force_login(self.user)
+
+    def test_invalid_dashboard_dates_do_not_crash(self):
+        response = self.client.get('/?start_date=bad&end_date=2026-01-01')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Invalid date format. Use YYYY-MM-DD.')
+
+    def test_reversed_dashboard_dates_fall_back_with_error(self):
+        response = self.client.get('/?start_date=2026-02-01&end_date=2026-01-01')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Start date cannot be after end date.')
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_health_check_returns_ok(self):
+        self.client.logout()
+        response = self.client.get('/health/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'ok'})

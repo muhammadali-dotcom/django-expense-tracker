@@ -329,6 +329,14 @@ class GroupViewSmokeTests(GroupExpenseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_mark_settlement_paid(self):
+        self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Trip', 'description': '', 'total_amount': '280.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'custom',
+            f'share_{self.ali.pk}': '70', f'share_{self.asim.pk}': '70',
+            f'share_{self.anas.pk}': '70', f'share_{self.rafay.pk}': '70',
+        })
+
         response = self.client.post(f'/groups/{self.group.pk}/settlements/mark-paid/', {
             'from_person': self.ali.pk, 'to_person': self.rafay.pk, 'amount': '70.00',
         })
@@ -414,3 +422,37 @@ class GroupViewSmokeTests(GroupExpenseTestCase):
         # Asim and Anas are unaffected - still owe their share.
         self.assertEqual(balances[self.asim], Decimal('-100.00'))
         self.assertEqual(balances[self.anas], Decimal('-100.00'))
+
+    def test_settlement_cannot_exceed_outstanding_balance(self):
+        self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Trip', 'description': '', 'total_amount': '400.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'equal',
+        })
+
+        response = self.client.post(f'/groups/{self.group.pk}/settlements/mark-paid/', {
+            'from_person': self.ali.pk, 'to_person': self.rafay.pk, 'amount': '101.00',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Settlement.objects.filter(group=self.group, status='paid').exists())
+
+    def test_settlement_people_must_be_group_members(self):
+        self.client.post(f'/groups/{self.group.pk}/expenses/add/', {
+            'title': 'Trip', 'description': '', 'total_amount': '400.00',
+            'paid_by': self.rafay.pk, 'category': 'Food',
+            'expense_date': '2026-07-10', 'split_type': 'equal',
+        })
+        outsider = Person.objects.create(user=self.user, name='Outsider')
+
+        response = self.client.post(f'/groups/{self.group.pk}/settlements/mark-paid/', {
+            'from_person': outsider.pk, 'to_person': self.rafay.pk, 'amount': '100.00',
+        })
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(Settlement.objects.filter(from_person=outsider).exists())
+
+    def test_group_dashboard_invalid_filters_do_not_crash(self):
+        response = self.client.get('/groups/dashboard/?start_date=bad&end_date=2026-01-01&group=abc')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Invalid date format. Use YYYY-MM-DD.')
