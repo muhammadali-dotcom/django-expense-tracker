@@ -48,6 +48,22 @@ class Category(models.Model):
         return self.name
 
 
+class BudgetAlert(models.Model):
+    """Tracks that a budget-exceeded email was already sent for a category/month."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='budget_alerts')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='budget_alerts')
+    year = models.PositiveSmallIntegerField()
+    month = models.PositiveSmallIntegerField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'category', 'year', 'month')
+
+    def __str__(self):
+        return f"{self.category.name} alert ({self.year}-{self.month:02d})"
+
+
 class Transaction(models.Model):
     TRANSACTION_TYPE = (
         ('Income', 'Income'),

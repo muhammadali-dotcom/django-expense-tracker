@@ -16,6 +16,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    var themeIcon = themeToggle.querySelector('i');
+    var syncIcon = function () {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeIcon.classList.toggle('bi-moon-stars', !isDark);
+      themeIcon.classList.toggle('bi-sun', isDark);
+    };
+    syncIcon();
+    themeToggle.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      syncIcon();
+    });
+  }
+
   document.querySelectorAll('.toast-custom').forEach(function (t) {
     setTimeout(function () {
       t.style.transition = 'all .3s ease';

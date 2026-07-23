@@ -22,7 +22,7 @@ from .models import (
     Category, Transaction, UserProfile,
     Person, ExpenseGroup, GroupMember, GroupExpense, ExpenseSplit, Settlement,
 )
-from .utils import get_budget_status, get_monthly_trend, get_category_trend
+from .utils import get_budget_status, get_monthly_trend, get_category_trend, check_and_send_budget_alert
 from .group_services import (
     calculate_equal_shares, validate_custom_split, calculate_percentage_shares,
     calculate_group_balances, generate_settlement_plan, get_dashboard_stats,
@@ -151,7 +151,10 @@ class AddTransactionView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         messages.success(self.request, 'Transaction added successfully.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        if self.object.transaction_type == 'Expense' and self.object.category_id:
+            check_and_send_budget_alert(self.request.user, self.object.category)
+        return response
 
 class EditTransactionView(LoginRequiredMixin, UpdateView):
     model = Transaction
@@ -169,7 +172,10 @@ class EditTransactionView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Transaction updated successfully.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        if self.object.transaction_type == 'Expense' and self.object.category_id:
+            check_and_send_budget_alert(self.request.user, self.object.category)
+        return response
 
 class DeleteTransactionView(LoginRequiredMixin, DeleteView):
     model = Transaction

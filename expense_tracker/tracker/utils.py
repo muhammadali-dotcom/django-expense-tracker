@@ -19,10 +19,12 @@ get_category_trend(user, start_date, end_date)
 
 from datetime import date
 
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import Category, Transaction
+from .models import BudgetAlert, Category, Transaction
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +54,21 @@ def _month_label(year: int, month: int) -> str:
 # Public helpers
 # ---------------------------------------------------------------------------
 
+def _category_spent(user, category, year: int, month: int) -> float:
+    """Return the total Expense amount for a category in a given year/month."""
+    total = (
+        Transaction.objects.filter(
+            user=user,
+            category=category,
+            transaction_type="Expense",
+            date__year=year,
+            date__month=month,
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+    return float(total)
+
+
 def get_budget_status(user):
     """
     Return a list of budget-status dicts for the current calendar month.
@@ -68,21 +85,51 @@ def get_budget_status(user):
 
     results = []
     for cat in categories:
-        spent = (
-            Transaction.objects.filter(
-                user=user,
-                category=cat,
-                transaction_type="Expense",
-                date__year=now.year,
-                date__month=now.month,
-            ).aggregate(total=Sum("amount"))["total"]
-            or 0
-        )
-        spent = float(spent)
+        spent = _category_spent(user, cat, now.year, now.month)
         pct = (spent / float(cat.budget) * 100) if cat.budget else 0.0
         results.append({"category": cat, "spent": spent, "pct": pct})
 
     return results
+
+
+def send_budget_alert_email(user, category, spent: float, pct: float):
+    """Send a one-off email notifying the user a category's budget was exceeded."""
+    if not user.email:
+        return
+    subject = f"Budget alert: {category.name} exceeded"
+    message = (
+        f"Your spending in \"{category.name}\" has reached {pct:.0f}% of its "
+        f"monthly budget ({spent:.2f} / {float(category.budget):.2f})."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=True,
+    )
+
+
+def check_and_send_budget_alert(user, category):
+    """
+    If the category has a budget and current-month spending has reached or
+    exceeded it, send an alert email — at most once per category per month.
+    """
+    if not category or category.budget is None:
+        return
+
+    now = timezone.now().date()
+    spent = _category_spent(user, category, now.year, now.month)
+    pct = (spent / float(category.budget) * 100) if category.budget else 0.0
+
+    if pct < 100:
+        return
+
+    _, created = BudgetAlert.objects.get_or_create(
+        user=user, category=category, year=now.year, month=now.month
+    )
+    if created:
+        send_budget_alert_email(user, category, spent, pct)
 
 
 def get_monthly_trend(user, start_date: date, end_date: date):

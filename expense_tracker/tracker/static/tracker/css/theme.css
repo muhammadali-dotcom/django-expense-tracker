@@ -50,6 +50,31 @@
   --gradient-income:  var(--success);
   --gradient-expense: var(--danger);
   --gradient-accent:  var(--teal);
+
+  color-scheme: light;
+}
+
+/* ── Dark theme overrides ── */
+[data-theme="dark"] {
+  --background:       #121815;
+  --surface:           #1B2320;
+  --surface-soft:      #212B27;
+  --primary:           #3FA684;
+  --primary-hover:     #56BB99;
+  --primary-soft:      rgba(63,166,132,.14);
+  --secondary:         #7FA997;
+  --accent-gold:       #E0B25C;
+  --accent-gold-soft:  rgba(224,178,92,.14);
+  --teal:              #3FB4A8;
+  --text-primary:      #EDF2EF;
+  --text-secondary:    #9AA8A2;
+  --border:            #2B3632;
+  --success:           #3FBE7E;
+  --success-soft:      rgba(63,190,126,.14);
+  --danger:            #E0645F;
+  --danger-soft:       rgba(224,100,95,.14);
+
+  color-scheme: dark;
 }
 
 /* ── Reset / Base ── */
@@ -63,6 +88,7 @@ html, body {
   color: var(--text-primary);
   font-size: 14.5px;
   -webkit-font-smoothing: antialiased;
+  transition: background-color .2s ease, color .2s ease;
 }
 
 a { color: var(--primary); text-decoration: none; transition: var(--transition); }
@@ -234,6 +260,8 @@ textarea:focus-visible, .btn:focus-visible, [tabindex]:focus-visible {
   position: relative;
 }
 .btn-icon:hover { background: var(--primary-soft); color: var(--primary); }
+.btn-icon i { transition: var(--transition); }
+#themeToggle:active i { transform: rotate(-20deg); }
 .btn-icon .notif-dot {
   position: absolute; top: 8px; right: 9px;
   width: 7px; height: 7px; border-radius: 50%;

@@ -2,6 +2,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    (function () {
+      var stored = localStorage.getItem('theme');
+      var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Expenzo – Smart Settlements{% endblock %}</title>
@@ -92,6 +99,7 @@
       </div>
     </div>
     <div class="topbar-right">
+      <button class="btn-icon" id="themeToggle" aria-label="Toggle dark mode"><i class="bi bi-moon-stars"></i></button>
       <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg"></i> New Transaction
       </a>

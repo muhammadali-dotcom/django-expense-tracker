@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import (
+    BudgetAlert,
     Category,
     Transaction,
     Person,
@@ -12,6 +13,7 @@ from .models import (
 
 admin.site.register(Category)
 admin.site.register(Transaction)
+admin.site.register(BudgetAlert)
 admin.site.register(Person)
 admin.site.register(ExpenseGroup)
 admin.site.register(GroupMember)
